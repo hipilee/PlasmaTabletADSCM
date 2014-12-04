@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">舒视</string>
+    <string name="title_section1">Section 1</string>
+    <string name="title_section2">Section 2</string>
+    <string name="title_section3">Section 3</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="making_pairs">配对浆机</string>
+    <string name="network_settings">网络设置</string>
+    <string name="general_welcome">献血献浆同样光荣</string>
+    <string name="title_activity_my">MyActivity</string>
+
+</resources>
