@@ -1,12 +1,11 @@
 package com.cylinder.www.ui;
 
-import java.util.Locale;
-
 import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentManager;
-import android.support.v13.app.FragmentPagerAdapter;
+import android.content.Intent;
 import android.os.Bundle;
+import android.support.v13.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -18,9 +17,16 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.cylinder.www.env.Mode;
-import com.cylinder.www.env.font.InterfaceTypefaceCreator;
+import com.cylinder.www.env.Signal;
 import com.cylinder.www.env.font.InterfaceTypeface;
+import com.cylinder.www.env.font.InterfaceTypefaceCreator;
 import com.cylinder.www.env.font.XKTypefaceCreator;
+import com.cylinder.www.env.person.businessobject.Donor;
+import com.cylinder.www.thread.ObservableLaunchActivityListenerThread;
+
+import java.lang.ref.WeakReference;
+import java.util.Locale;
+import java.util.Observable;
 
 
 public class LaunchActivity extends Activity {
@@ -41,7 +47,9 @@ public class LaunchActivity extends Activity {
     ViewPager mViewPager;
     static InterfaceTypeface XKface;
     InterfaceTypefaceCreator typefaceCreator;
-
+    Donor donor=Donor.getInstance();
+    ObservableLaunchActivityListenerThread observableLaunchActivityListenerThread = null;
+    ObserverLaunchHandler observerLaunchHandler = new ObserverLaunchHandler();
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -62,6 +70,11 @@ public class LaunchActivity extends Activity {
         // Set up the ViewPager with the sections adapter.
         mViewPager = (ViewPager) findViewById(R.id.vp_fragment_container);
         mViewPager.setAdapter(mSectionsPagerAdapter);
+
+        // Start launch listener thread.
+        observableLaunchActivityListenerThread = new ObservableLaunchActivityListenerThread(donor);
+        observableLaunchActivityListenerThread.addObserver(observerLaunchHandler);
+        observableLaunchActivityListenerThread.start();
 
     }
 
@@ -115,7 +128,10 @@ public class LaunchActivity extends Activity {
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        return super.onKeyDown(keyCode, event);
+        if(keyCode == KeyEvent.KEYCODE_BACK){
+            return  true;
+        }
+        return  super.onKeyDown(keyCode, event);
     }
 
     @Override
@@ -153,6 +169,7 @@ public class LaunchActivity extends Activity {
 
         @Override
         public Fragment getItem(int position) {
+            Log.e("vpvp","position="+position);
             // getItem is called to instantiate the fragment for the given page.
             // Return a PlaceholderFragment (defined as a static inner class below).
             return PlaceholderFragment.newInstance(position + 1);
@@ -161,7 +178,8 @@ public class LaunchActivity extends Activity {
         @Override
         public int getCount() {
             // Show 3 total pages.
-            return 1;
+
+            return 3;
         }
 
         @Override
@@ -197,6 +215,8 @@ public class LaunchActivity extends Activity {
          * number.
          */
         public static PlaceholderFragment newInstance(int sectionNumber) {
+            Log.e("vpvp","sectionNumber="+sectionNumber);
+
             PlaceholderFragment fragment = new PlaceholderFragment();
             Bundle args = new Bundle();
             args.putInt(ARG_SECTION_NUMBER, sectionNumber);
@@ -213,10 +233,29 @@ public class LaunchActivity extends Activity {
             View rootView = inflater.inflate(R.layout.fragment_launch, container, false);
 
             // Set the typeface of the textViewWelcome.
-            textViewWelcome = (TextView) rootView.findViewById(R.id.tv_welcome);
+            textViewWelcome = (TextView) rootView.findViewById(R.id.tv_slogan);
             textViewWelcome.setTypeface(XKface.getTypeface());
 
             return rootView;
+        }
+    }
+
+    private class ObserverLaunchHandler implements java.util.Observer{
+
+        // Avoiding memory leaks, we use reference Activity weakly.
+        WeakReference<Activity> wa = new WeakReference<Activity>(LaunchActivity.this);
+
+        @Override
+        public void update(Observable observable, Object data) {
+
+            switch ((Signal)data){
+            case CONFIRM:
+                wa.get().finish();
+                Intent intent = new Intent(wa.get(), MainActivity.class);
+                wa.get().startActivity(intent);
+                break;
+            default:
+            }
         }
     }
 
