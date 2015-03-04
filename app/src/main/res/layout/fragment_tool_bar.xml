@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:background="#FFFFFFFF">
+
+        <Button
+            android:id="@+id/btnselectvideo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="#FF000000"
+            android:text="@string/selectvideo"/>
+        <Button
+            android:id="@+id/btnplasmaappointment"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="#FF000000"
+            android:text="@string/plasmaappointment"/>
+        <Button
+            android:id="@+id/btnplasmaevaluation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="#FF000000"
+            android:text="@string/plasmaevaluation"/>
+        <Button
+            android:id="@+id/btnhelp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="#FF000000"
+            android:text="@string/help"/>
+    </LinearLayout>
+
+</FrameLayout>

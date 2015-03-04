@@ -20,6 +20,7 @@ public enum Signal {
     OFF,
     FETCHINFO,
     // The hints received from the plasma.
+    CONFIRM,
     FIST,
     WITHOUTFIST,
     FINISHIMAGEVIWE,

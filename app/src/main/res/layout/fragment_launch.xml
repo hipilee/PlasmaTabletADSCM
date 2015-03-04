@@ -9,13 +9,5 @@
     android:background="@drawable/bg_standby"
     tools:context=".MainActivity$PlaceholderFragment">
 
-    <TextView
-        android:id="@+id/tv_welcome"
-        android:layout_width="400dp"
-        android:layout_height="100dp"
-        android:layout_marginTop="100dp"
-        android:layout_marginLeft="250dp"
-        android:textSize="50sp"
-        android:text="@string/general_welcome"/>
 
 </RelativeLayout>

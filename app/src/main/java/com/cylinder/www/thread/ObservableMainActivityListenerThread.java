@@ -1,12 +1,14 @@
 package com.cylinder.www.thread;
 
-import com.cylinder.www.env.person.businessobject.Donor;
 import com.cylinder.www.env.Signal;
-import com.cylinder.www.env.net.InterfaceNetworkCreator;
-import com.cylinder.www.env.net.ServerNetworkCreator;
 import com.cylinder.www.env.net.InterfaceNetwork;
+import com.cylinder.www.env.net.InterfaceNetworkCreator;
+import com.cylinder.www.env.net.ServerInformationTransaction;
+import com.cylinder.www.env.net.ServerNetworkCreator;
+import com.cylinder.www.env.person.businessobject.Donor;
 
-import org.apache.http.client.methods.HttpGet;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Observable;
@@ -45,12 +47,43 @@ public class ObservableMainActivityListenerThread extends Thread {
     @Override
     public void run() {
         super.run();
-        // Generate the httpGet for confirm/puncture/start/fist/end.
-        HttpGet requestCPSFE = new HttpGet(networkInterface.getJsonURL()+"/rest/mails/A001");
-        requestCPSFE.setHeader("json", "application/json");
-        requestCPSFE.setHeader("Content-Type", "application/json");
 
+        JSONObject jsonObject;
+        String result = null;
         while (true) {
+            // Get jsonObject
+            ServerInformationTransaction serverInformationTransaction = new ServerInformationTransaction();
+            String networkPath = networkInterface.getJsonURL()+"/rest/mails/A001";
+            jsonObject = serverInformationTransaction.fetchJSONObjectFromServer(networkPath);
+
+            if (null == jsonObject){
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                continue;
+            }
+
+            try {
+                result = jsonObject.getString("header");
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+            if(new String("puncture").equals(result)){
+                hintObservable.notifyObservers(Signal.PUNCTURE);
+            }
+            else if(new String("start").equals(result)){
+                hintObservable.notifyObservers(Signal.START);
+            }
+            else if(new String("fist").equals(result)){
+                hintObservable.notifyObservers(Signal.FIST);
+            }
+            else if(new String("end").equals(result)){
+                hintObservable.notifyObservers(Signal.END);
+                break;
+            }
 
         }
     }
@@ -82,4 +115,6 @@ public class ObservableMainActivityListenerThread extends Thread {
             }
         }
     }
+
+
 }

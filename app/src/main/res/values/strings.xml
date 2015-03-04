@@ -10,5 +10,12 @@
     <string name="network_settings">网络设置</string>
     <string name="general_welcome">献血献浆同样光荣</string>
     <string name="title_activity_my">MyActivity</string>
+    <string name="home">主页</string>
+    <string name="selectvideo">点播</string>
+    <string name="plasmacheck">查询</string>
+    <string name="plasmaappointment">预约</string>
+    <string name="help">呼叫</string>
+    <string name="plasmaevaluation">评价</string>
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 
 </resources>

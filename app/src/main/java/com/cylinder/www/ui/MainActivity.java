@@ -1,26 +1,21 @@
 package com.cylinder.www.ui;
 
-import android.app.Activity;
-import android.app.Fragment;
-import android.app.FragmentManager;
+import android.app.FragmentTransaction;
 import android.content.pm.ActivityInfo;
 import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.support.v13.app.FragmentPagerAdapter;
-import android.support.v4.view.ViewPager;
+import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.cylinder.www.env.Mode;
 import com.cylinder.www.env.Signal;
@@ -33,6 +28,7 @@ import com.cylinder.www.hardware.CameraManager;
 import com.cylinder.www.thread.ObservableMainActivityListenerThread;
 import com.cylinder.www.thread.SendPictureThread;
 import com.cylinder.www.thread.SendVideoThread;
+import com.cylinder.www.utils.ShowGif;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -40,22 +36,8 @@ import java.util.Observable;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class MainActivity extends Activity implements SurfaceHolder.Callback,ToolBarFragment.OnToolBarOnClickListener{
+public class MainActivity extends FragmentActivity implements SurfaceHolder.Callback,ToolBarFragment.OnToolBarOnClickListener{
 
-    /**
-     * The {@link android.support.v4.view.PagerAdapter} that will provide
-     * fragments for each of the sections. We use a
-     * {@link FragmentPagerAdapter} derivative, which will keep every
-     * loaded fragment in memory. If this becomes too memory intensive, it
-     * may be best to switch to a
-     * {@link android.support.v13.app.FragmentStatePagerAdapter}.
-     */
-    SectionsPagerAdapter mSectionsPagerAdapter;
-
-    /**
-     * The {@link ViewPager} that will host the section contents.
-     */
-    private ViewPager mViewPager;
     private Donor donor = Donor.getInstance();
     private TextView welcomeTextView;
     private InterfaceTypeface XKface;
@@ -65,8 +47,13 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback,Too
     private TakePictureHandler takePictureHandler;
     private ObservableMainActivityListenerThread observableMainActivityListenerThread;
     private ObserverMainHandler observerMainHandler;
-
-
+    private SloganFragment sloganFragment;
+    private VideoFragment videoFragment;
+    public Handler handler;
+    private AppointmentFragment appointmentFragment;
+    private AssessmentFragment assessmentFragment;
+    private ImageView iv;
+    private  PromotionFragment promotionFragment;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -82,23 +69,26 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback,Too
         typefaceCreator = new XKTypefaceCreator();
         XKface = typefaceCreator.createTypeface(this);
 
-        welcomeTextView = (TextView) this.findViewById(R.id.tv_welcome);
+        sloganFragment = new SloganFragment();
+        getFragmentManager().beginTransaction().add(R.id.main_ui_fragment,sloganFragment).commit();
+
+        welcomeTextView = (TextView)this.findViewById(R.id.tv_welcome);
         welcomeTextView.setTypeface(XKface.getTypeface());
+        Log.e("error", donor.getDonorID() + "");
+        welcomeTextView.setText(donor.getUserName() + ":  欢迎您来献浆！");
+
+        iv = (ImageView) this.findViewById(R.id.ivHint);
+
 
         toolbarFragment = this.findViewById(R.id.tool_bar_fragment);
         toolbarFragment.setVisibility(View.GONE);
 
+
+
         surfaceViewPreview = (SurfaceView) this.findViewById(R.id.surfaceview_preview);
         surfaceViewPreview.getHolder().addCallback(this);
 
-        // Create the adapter that will return a fragment for each of the three
-        // primary sections of the activity.
-        mSectionsPagerAdapter = new SectionsPagerAdapter(getFragmentManager());
 
-        // Set up the ViewPager with the sections adapter.
-        mViewPager = (ViewPager) findViewById(R.id.vp);
-        mViewPager.setAdapter(mSectionsPagerAdapter);
-        mViewPager.setVisibility(View.GONE);
 
         takePictureHandler = new TakePictureHandler(this);
 
@@ -109,6 +99,41 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback,Too
 
         Log.e("error", "MainActivity==onCreate");
 
+
+        handler = new Handler(){
+            @Override
+            public void handleMessage(Message msg) {
+                super.handleMessage(msg);
+                switch (msg.what) {
+                    case 0:
+                        toolbarFragment.setVisibility(View.VISIBLE);
+                        assessmentFragment = new AssessmentFragment();
+                        //Create new fragment and transaction
+                        FragmentTransaction transaction = getFragmentManager().beginTransaction();
+                        //Replace whatever is in the fragment_container view with this fragment,
+                        //and add the transaction to the back stack
+                        transaction.replace(R.id.main_ui_fragment, assessmentFragment);
+                        transaction.addToBackStack(null);
+                        //Commit the transaction
+                        transaction.commit();
+
+//                        getFragmentManager().beginTransaction().add(R.id.main_ui_fragment, assessmentFragment).commit();
+                        break;
+                    case 1:
+                        toolbarFragment.setVisibility(View.GONE);
+                        PlayVideoFragment playVideoFragment =new PlayVideoFragment();
+                        getFragmentManager().beginTransaction().add(R.id.main_ui_fragment, playVideoFragment).commit();
+                        break;
+                    case 3:
+                        toolbarFragment.setVisibility(View.VISIBLE);
+                        VideoFragment v =new VideoFragment();
+                        getFragmentManager().beginTransaction().add(R.id.main_ui_fragment, v).commit();
+                        break;
+
+                }
+
+            }
+        };
     }
 
     @Override
@@ -126,10 +151,8 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback,Too
     @Override
     protected void onResume() {
         super.onResume();
-        Log.e("error", donor.getDonorID() + "");
-        welcomeTextView.setText(donor.getUserName() + ":  欢迎您来献浆！");
 
-//        CameraManager.getInstance().takePicture();
+
         Log.e("error", "MainActivity==onResume");
     }
 
@@ -182,11 +205,6 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback,Too
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         CameraManager.getInstance().getCamera().startPreview();
 
-        // First capture;
-        Message msg = Message.obtain();
-        msg.obj = Signal.CAPTURE;
-        takePictureHandler.sendMessageDelayed(msg,2000);
-        TimeInterval.getInstance().setStartTime(System.currentTimeMillis());
         Log.e("error","MainActivity==surfaceChanged");
     }
 
@@ -199,97 +217,24 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback,Too
     @Override
     public void onButtonSelected(Signal s) {
 
-    }
 
+        switch(s){
+            case TOVIDEO:
+                videoFragment = new VideoFragment();
+                getFragmentManager().beginTransaction().add(R.id.main_ui_fragment,videoFragment).commit();
+                break;
+            case TOAPPOINTMENT:
+                appointmentFragment = new AppointmentFragment();
+                getFragmentManager().beginTransaction().add(R.id.main_ui_fragment,appointmentFragment).commit();
+                break;
+            case TOEVALUATION:
+                assessmentFragment = new AssessmentFragment();
+                getFragmentManager().beginTransaction().add(R.id.main_ui_fragment,assessmentFragment).commit();
+                break;
 
-    /**
-     * A {@link FragmentPagerAdapter} that returns a fragment corresponding to
-     * one of the sections/tabs/pages.
-     */
-    public class SectionsPagerAdapter extends FragmentPagerAdapter {
-
-        public SectionsPagerAdapter(FragmentManager fm) {
-            super(fm);
-        }
-
-        @Override
-        public Fragment getItem(int position) {
-            Log.e("vp","position="+position);
-            // getItem is called to instantiate the fragment for the given page.
-            // Return a PlaceholderFragment (defined as a static inner class below).
-            return PlaceholderFragment.newInstance(position + 1);
-        }
-
-        @Override
-        public int getCount() {
-            // Show  total pages.
-            return 4;
         }
 
     }
-
-    /**
-     * A placeholder fragment containing a simple view.
-     */
-    public static class PlaceholderFragment extends Fragment {
-
-
-        /**
-         * The fragment argument representing the section number for this
-         * fragment.
-         */
-        private static final String ARG_SECTION_NUMBER = "section_number";
-
-        /**
-         * Returns a new instance of this fragment for the given section
-         * number.
-         */
-        public static PlaceholderFragment newInstance(int sectionNumber) {
-            Log.e("vp","newInstance "+sectionNumber);
-            PlaceholderFragment fragment = new PlaceholderFragment();
-            Bundle args = new Bundle();
-            args.putInt(ARG_SECTION_NUMBER, sectionNumber);
-            fragment.setArguments(args);
-
-            return fragment;
-        }
-
-        public PlaceholderFragment() {
-        }
-
-
-
-        @Override
-        public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                Bundle savedInstanceState) {
-
-            Log.e("vp","onCreateView "+getArguments().getInt(ARG_SECTION_NUMBER));
-            View rootView = null;
-            int sectionNO = getArguments().getInt(ARG_SECTION_NUMBER);
-            switch (sectionNO) {
-                case 1:
-                    Log.e("vp","fragment_video");
-                    rootView = inflater.inflate(R.layout.fragment_video, container, false);
-                    break;
-                case 2:
-                    Log.e("vp","fragment_request");
-                    rootView = inflater.inflate(R.layout.fragment_request, container, false);
-                    break;
-                case 3:
-                    Log.e("vp","fragment_appointment");
-                    rootView = inflater.inflate(R.layout.fragment_appointment, container, false);
-                    break;
-                case 4:
-                    Log.e("vp","fragment_assessment");
-                    rootView = inflater.inflate(R.layout.fragment_assessment, container, false);
-                    break;
-                default:
-                    break;
-            }
-            return rootView;
-        }
-    }
-
 
     private  static class TakePictureHandler extends Handler {
 
@@ -306,20 +251,20 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback,Too
             switch((Signal)msg.obj){
 
                 case CAPTURE:
-                    Toast.makeText(mActivity.get(), "开始拍照", Toast.LENGTH_SHORT).show();
+//                    Toast.makeText(mActivity.get(), "开始拍照", Toast.LENGTH_SHORT).show();
 
                     CameraManager.getInstance().takePicture(new SendPictureThread(this));
                     break;
 
                 case ENDCAPTURE:
-                    Toast.makeText(mActivity.get(), "结束拍照", Toast.LENGTH_SHORT).show();
-                    recordVideo(mActivity.get().surfaceViewPreview);
+//                    Toast.makeText(mActivity.get(), "结束拍照", Toast.LENGTH_SHORT).show();
+                    recordVideo(mActivity.get().surfaceViewPreview,1);
 
                     break;
 
                 case LAUNCHVIDEO:
-                    Toast.makeText(mActivity.get(), "启动视频", Toast.LENGTH_SHORT).show();
-                    recordVideo(mActivity.get().surfaceViewPreview);
+//                    Toast.makeText(mActivity.get(), "启动视频", Toast.LENGTH_SHORT).show();
+                    recordVideo(mActivity.get().surfaceViewPreview,0);
 
                     break;
                 default:
@@ -332,17 +277,64 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback,Too
     private static class ObserverMainHandler extends Handler implements java.util.Observer {
 
         private WeakReference<MainActivity> mActivity;
+        private ShowGif showGif=null;
+
         private ObserverMainHandler(WeakReference<MainActivity> mActivity) {
             this.mActivity = mActivity;
+
         }
 
         @Override
         public void handleMessage(Message msg) {
-            Log.e("error","mmmmmmmmmmsssssssssssssssssggggggggggg");
+
             super.handleMessage(msg);
             switch((Signal)msg.obj){
                 case PUNCTURE:
                     mActivity.get().welcomeTextView.setVisibility(View.GONE);
+                    mActivity.get().promotionFragment = new PromotionFragment();
+                    mActivity.get().getFragmentManager().beginTransaction().add(R.id.main_ui_fragment,mActivity.get().promotionFragment).commit();
+
+//                    PlayVideoFragment p = new PlayVideoFragment();
+//                    mActivity.get().getFragmentManager().beginTransaction().add(R.id.main_ui_fragment,p).commit();
+
+//                    VideoFragment v = new VideoFragment();
+//                    mActivity.get().getFragmentManager().beginTransaction().add(R.id.main_ui_fragment,v).commit();
+
+
+                    //播放视频
+                    Log.e("error","播放视频");
+                    break;
+                case START:
+                    msg = Message.obtain();
+                    msg.obj = Signal.CAPTURE;
+                    mActivity.get().takePictureHandler.sendMessageDelayed(msg,2000);
+                    TimeInterval.getInstance().setStartTime(System.currentTimeMillis());
+                    Log.e("error","开始");
+                    break;
+                case FIST:
+                    if(showGif == null)
+                    {
+
+                        showGif = new ShowGif(mActivity.get().iv,"makeafist.gif",10,mActivity.get());
+                        showGif.start();
+                    }
+                    else if(!showGif.isShowing()){
+                        showGif = new ShowGif(mActivity.get().iv,"makeafist.gif",10,mActivity.get());
+                        showGif.start();
+                    }
+
+                    Log.e("error","握拳");
+                    break;
+                case END:
+                    Log.e("error","结束");
+                    mActivity.get().sloganFragment = new SloganFragment();
+                    mActivity.get().getFragmentManager().beginTransaction().add(R.id.main_ui_fragment,mActivity.get().sloganFragment).commit();
+
+                    mActivity.get().welcomeTextView = (TextView) mActivity.get().findViewById(R.id.tv_welcome);
+                    mActivity.get().welcomeTextView.setTypeface(mActivity.get().XKface.getTypeface());
+                    mActivity.get().welcomeTextView.setVisibility(View.VISIBLE);
+                    mActivity.get().welcomeTextView.setText(mActivity.get().donor.getUserName() + ":  谢谢您的献浆！");
+                    mActivity.get().toolbarFragment.setVisibility(View.GONE);
                     break;
                 default:
             }
@@ -376,7 +368,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback,Too
 
 
 
-    private static void recordVideo(SurfaceView s){
+    private static void recordVideo(SurfaceView s, final int r){
         final MediaRecorder mediaRecorder =new MediaRecorder();
         final Handler handler = new Handler() {
             @Override
@@ -390,7 +382,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback,Too
                 CameraManager.getInstance().stopPreview();
                 CameraManager.getInstance().release();
 
-                new SendVideoThread().start();
+                new SendVideoThread(r).start();
             }
         };
         Timer timer = new Timer();

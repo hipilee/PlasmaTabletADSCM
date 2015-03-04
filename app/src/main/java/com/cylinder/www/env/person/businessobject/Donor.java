@@ -11,6 +11,8 @@ public class Donor {
 
     private Bitmap faceBitmap;
 
+    private String donorID;
+
     private static Donor ourInstance = new Donor();
 
     public static Donor getInstance() {
@@ -35,6 +37,14 @@ public class Donor {
 
     public void setFaceBitmap(Bitmap faceBitmap) {
         this.faceBitmap = faceBitmap;
+    }
+
+
+    public String getDonorID() {
+        return donorID;
+    }
+    public void setDonorID(String donorID) {
+        this.donorID = donorID;
     }
 
 
