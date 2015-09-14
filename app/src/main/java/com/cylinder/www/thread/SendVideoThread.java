@@ -35,33 +35,7 @@ public class SendVideoThread extends Thread {
     @Override
     public void run() {
         super.run();
-        JSONObject jsonObject = new JSONObject();
-        Date date = new Date();
-        long elapsedtime = date.getTime();
 
-        byte[] videoByte = getBytesFromFile("/sdcard/video.mp4");
-
-
-
-        // Put the byte array into the JSONArray.
-        JSONArray jsonArray = new JSONArray();
-        for(byte rgb: videoByte)
-            jsonArray.put(rgb);
-
-        try {
-            jsonObject.put("createTime",elapsedtime);
-            jsonObject.put("recordTime",elapsedtime);
-            jsonObject.put("length",videoByte.length);
-            jsonObject.put("donorId", Donor.getInstance().getDonorID());
-            jsonObject.put("machineId","1898");
-            jsonObject.put("data", jsonArray);
-            jsonObject.put("recognitionResult",r);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-        ServerInformationTransaction serverInformationTransaction = new ServerInformationTransaction();
-        serverInformationTransaction.sendToServer(network.getJsonURL()+"/rest/videos",jsonObject);
     }
 
     /**
