@@ -55,7 +55,7 @@
 
     <fragment
         android:id="@+id/tool_bar_fragment"
-        android:name="com.cylinder.www.ui.ToolBarFragment"
+        android:name="com.cylinder.www.ui.ToolFragment"
         android:layout_width="150dp"
         android:layout_height="match_parent" />
 
