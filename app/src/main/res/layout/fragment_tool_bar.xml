@@ -1,43 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical" android:layout_width="match_parent"
-    android:layout_height="match_parent">
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
 
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="horizontal"
-        android:background="#FFFFFFFF">
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1.0"
+        android:gravity="top"
+        android:orientation="vertical">
 
-        <Button
-            android:id="@+id/btnselectvideo"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="#FF000000"
-            android:text="@string/selectvideo"/>
-        <Button
-            android:id="@+id/btnplasmaappointment"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="#FF000000"
-            android:text="@string/plasmaappointment"/>
-        <Button
-            android:id="@+id/btnplasmaevaluation"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="#FF000000"
-            android:text="@string/plasmaevaluation"/>
-        <Button
-            android:id="@+id/btnhelp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="#FF000000"
-            android:text="@string/help"/>
+        <ImageView
+            android:id="@+id/ivAnimaiton"
+            android:layout_width="155dp"
+            android:layout_height="155dp" />
+
     </LinearLayout>
 
-</FrameLayout>
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1.0"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <AnalogClock
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+    </LinearLayout>
+
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1.0"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <Button
+            android:layout_width="155dp"
+            android:layout_height="155dp"
+            android:background="@drawable/ic_launcher"/>
+
+    </LinearLayout>
+
+
+</LinearLayout>

@@ -1,0 +1,29 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/hxs"
+    tools:context="com.cylinder.www.ui.FarewellFragment">
+
+
+    <TextView
+        android:id="@+id/end_slogan_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="450dp"
+        android:text="*********************"
+        android:textColor="#FFFFFF"
+        android:textSize="60sp" />
+
+    <TextView
+        android:id="@+id/end_thanks_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="550dp"
+        android:layout_gravity="right"
+        android:text="**************"
+        android:textColor="#66CC66"
+        android:textSize="60sp" />
+
+
+</FrameLayout>

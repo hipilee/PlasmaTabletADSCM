@@ -8,7 +8,7 @@ import android.graphics.Typeface;
 /**
  * Created by hipilee on 2014/11/21.
  */
-public class XKTypeface implements InterfaceTypeface {
+public class XKTypeface extends AbstractTypeface {
     private static XKTypeface ourInstance = new XKTypeface();
 
     private static Context context;
@@ -29,4 +29,6 @@ public class XKTypeface implements InterfaceTypeface {
         return Typeface.createFromAsset(context.getAssets(),"fonts/STXINGKA.TTF");
 
     }
+
+
 }

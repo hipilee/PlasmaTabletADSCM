@@ -7,6 +7,11 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
+
+import com.cylinder.www.env.font.AbstractTypeface;
+import com.cylinder.www.env.font.AbstractTypefaceCreator;
+import com.cylinder.www.env.font.XKTypefaceCreator;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -19,7 +24,7 @@ import android.view.ViewGroup;
 public class SloganFragment extends Fragment {
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
+    private static final String ARG_PARAM1 = "slogan";
     private static final String ARG_PARAM2 = "param2";
 
     // TODO: Rename and change types of parameters
@@ -27,6 +32,9 @@ public class SloganFragment extends Fragment {
     private String mParam2;
 
     private OnFragmentInteractionListener mListener;
+
+    private AbstractTypeface XKface;
+    private AbstractTypefaceCreator typefaceCreator;
 
     /**
      * Use this factory method to create a new instance of
@@ -51,6 +59,12 @@ public class SloganFragment extends Fragment {
     }
 
     @Override
+    public void onAttach(Activity activity) {
+        super.onAttach(activity);
+
+    }
+
+    @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
@@ -60,10 +74,23 @@ public class SloganFragment extends Fragment {
     }
 
     @Override
+    public void onActivityCreated(Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+    }
+
+    @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+
+        // Given the typeface, we should construct a factory pattern for these type face.
+        typefaceCreator = new XKTypefaceCreator();
+        XKface = typefaceCreator.createTypeface(getActivity());
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_slogan, container, false);
+        View view = inflater.inflate(R.layout.fragment_slogan, container, false);
+        TextView textViewSlogan = (TextView)view.findViewById(R.id.tv_slogan);
+        textViewSlogan.setText(mParam1);
+        textViewSlogan.setTypeface(XKface.getTypeface());
+        return view;
     }
 
     // TODO: Rename method, update argument and hook method into UI event
@@ -73,11 +100,7 @@ public class SloganFragment extends Fragment {
         }
     }
 
-    @Override
-    public void onAttach(Activity activity) {
-        super.onAttach(activity);
 
-    }
 
     @Override
     public void onDetach() {

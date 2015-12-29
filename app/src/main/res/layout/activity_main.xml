@@ -1,50 +1,69 @@
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#FFFFFFFF"
+    android:orientation="horizontal"
     tools:context=".MainActivity">
 
-    <LinearLayout
-        android:layout_width="match_parent"
+    <FrameLayout
+        android:id="@+id/main"
+        android:layout_width="0dp"
         android:layout_height="match_parent"
+        android:layout_weight="1.0"
+        android:background="#FFFFFFFF"
         android:orientation="vertical">
 
         <FrameLayout
+            android:id="@+id/main_ui_fragment_container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#FFFFFFFF" />
+
+
+        <ImageView
+            android:id="@+id/ivHint"
+            android:layout_width="300dp"
+            android:layout_height="250dp"
+            android:layout_gravity="center_horizontal|top"
+            android:background="@drawable/ic_launcher"
+            android:visibility="invisible" />
+
+        <FrameLayout
+            android:id="@+id/configuration_fragment_container"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
             android:background="#FFFFFFFF"
-            android:id="@+id/main_ui_fragment"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
+            android:visibility="invisible">
 
-        <fragment
-            android:id="@+id/tool_bar_fragment"
-            class="com.cylinder.www.ui.ToolBarFragment"
-            android:layout_width="match_parent"
-            android:layout_height="48dp">
+            <fragment
+                android:id="@+id/configuration_fragment"
+                android:name="com.cylinder.www.ui.ConfigurationFragment"
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent" />
 
-            </fragment>
+        </FrameLayout>
 
-        <SurfaceView
-            android:id="@+id/surfaceview_preview"
-            android:layout_width="match_parent"
-            android:layout_height="1px" />
 
-    </LinearLayout>
+    </FrameLayout>
 
-    <TextView
-        android:id="@+id/tv_welcome"
-        android:layout_width="800dp"
-        android:layout_height="300dp"
-        android:layout_gravity="center"
-        android:text="welcome"
-        android:textSize="70sp" />
+    <View
+        android:layout_width="1dp"
+        android:layout_height="match_parent"
+        android:background="#909090" />
 
-    <ImageView
-        android:id="@+id/ivHint"
-        android:layout_gravity="center"
-        android:layout_width="300dp"
-        android:layout_height="250dp"
-        android:visibility="invisible" />
 
-</FrameLayout>
+    <fragment
+        android:id="@+id/tool_bar_fragment"
+        android:name="com.cylinder.www.ui.ToolBarFragment"
+        android:layout_width="150dp"
+        android:layout_height="match_parent" />
+
+
+    <SurfaceView
+        android:id="@+id/surface_view_preview"
+        android:layout_width="1px"
+        android:layout_height="match_parent" />
+
+
+</LinearLayout>

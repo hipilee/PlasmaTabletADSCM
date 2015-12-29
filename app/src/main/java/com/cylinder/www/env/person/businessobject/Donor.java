@@ -7,13 +7,13 @@ import android.graphics.Bitmap;
  */
 public class Donor {
 
-    private String userName;
+    private static String userName;
 
-    private Bitmap faceBitmap;
+    private static Bitmap faceBitmap;
 
-    private String donorID;
+    private static String donorID="";
 
-    private static Donor ourInstance = new Donor();
+    private static final Donor ourInstance = new Donor();
 
     public static Donor getInstance() {
         return ourInstance;
@@ -22,32 +22,29 @@ public class Donor {
     private Donor() {
     }
 
-    public String getUserName() {
+    public static String getUserName() {
         return userName;
     }
 
-    public void setUserName(String userName) {
-        this.userName = userName;
+    public static void setUserName(String userName) {
+        Donor.userName = userName;
     }
 
 
-    public Bitmap getFaceBitmap() {
+    public static Bitmap getFaceBitmap() {
         return faceBitmap;
     }
 
-    public void setFaceBitmap(Bitmap faceBitmap) {
-        this.faceBitmap = faceBitmap;
+    public static void setFaceBitmap(Bitmap faceBitmap) {
+        Donor.faceBitmap = faceBitmap;
     }
 
 
-    public String getDonorID() {
-        return donorID;
+    public static String getDonorID() {
+        return Donor.donorID;
     }
-    public void setDonorID(String donorID) {
-        this.donorID = donorID;
+    public static void setDonorID(String donorID) {
+        Donor.donorID = donorID;
     }
-
-
-
 }
 

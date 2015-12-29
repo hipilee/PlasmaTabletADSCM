@@ -6,16 +6,13 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Message;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.LinearLayout;
-import android.widget.VideoView;
+
 
 import java.io.IOException;
 
@@ -41,8 +38,8 @@ public class PlayVideoFragment extends Fragment {
 
     private SurfaceView surfaceView;
     private MediaPlayer mediaPlayer;
-    private Button btn1,btn2,btn3;
-    private VideoView vv;
+    private View view;
+
 
     /**
      * Use this factory method to create a new instance of
@@ -63,19 +60,22 @@ public class PlayVideoFragment extends Fragment {
     }
 
     public PlayVideoFragment() {
+        Log.e("PlayVideoFragment", "PlayVideoFragment");
         // Required empty public constructor
     }
 
     @Override
     public void onAttach(Activity activity) {
         super.onAttach(activity);
-        Log.e("PlayVideoFragment","onAttach");
+        Log.e("PlayVideoFragment", "onAttach ");
+
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.e("PlayVideoFragment","onCreate");
+        Log.e("PlayVideoFragment", "onCreate ");
+
         if (getArguments() != null) {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
@@ -85,72 +85,120 @@ public class PlayVideoFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        Log.e("PlayVideoFragment","onCreateView");
-        // Inflate the layout for this fragment
+        Log.e("PlayVideoFragment", "onCreateView 1");
+
         mediaPlayer = new MediaPlayer();
+        Log.e("PlayVideoFragment", "onCreateView 2");
+
         View view = inflater.inflate(R.layout.fragment_play_video, container, false);
+        Log.e("PlayVideoFragment", "onCreateView 3");
+
         surfaceView = (SurfaceView) view.findViewById(R.id.video_player);
+        Log.e("PlayVideoFragment", "onCreateView 4");
 
-        btn3 = (Button) view.findViewById(R.id.f);
 
-        btn3.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mediaPlayer.stop();
-                mediaPlayer.release();
-                Message msg = Message.obtain();
-                msg.what = 3;
-                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(1, 1);
-
-                surfaceView.setLayoutParams(lp);
-                ((MainActivity) getActivity()).handler.sendMessage(msg);
-            }
-        });
-
+        this.view = view;
         return view;
     }
 
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        Log.e("PlayVideoFragment","onActivityCreated");
+        Log.e("PlayVideoFragment", "onActivityCreated 1");
+
     }
 
+    @Override
+    public void onStart() {
+        super.onStart();
+        Log.e("PlayVideoFragment", "onStart ");
+
+    }
 
     @Override
     public void onResume() {
         super.onResume();
+        Log.e("PlayVideoFragment", "onResume ");
 
-        Log.e("PlayVideoFragment","onResume");
-        final SurfaceHolder surfaceHolder = surfaceView.getHolder();
-        surfaceHolder.addCallback( new SurfaceHolder.Callback() {
+        surfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
             @Override
             public void surfaceCreated(SurfaceHolder holder) {
 
-                Log.e("PlayVideoFragment","surfaceCreated");
+                // mediaPlayer state:idle
+                Log.e("PlayVideoFragment", "surfaceCreated 1");
                 mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+                Log.e("PlayVideoFragment", "surfaceCreated 2");
                 mediaPlayer.setDisplay(holder);
-
+                Log.e("PlayVideoFragment", "surfaceCreated 3");
                 try {
-                    mediaPlayer.setDataSource("/sdcard/lz.mp4");
-                    mediaPlayer.prepare();
-                    mediaPlayer.start();
-
+                    mediaPlayer.setDataSource("/sdcard/donation.mp4");
                 } catch (IOException e) {
                     e.printStackTrace();
+                } finally {
                 }
+
+                mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                    @Override
+                    public void onCompletion(MediaPlayer mp) {
+                        mp.stop();
+
+                        mp.reset();
+
+                        try {
+                            mp.setDataSource("/sdcard/lz.wmv");
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        } finally {
+                        }
+
+                        mp.setOnCompletionListener(this);
+                        mp.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+
+                            @Override
+                            public void onPrepared(MediaPlayer mp) {
+                                // mediaPlayer state:prepared
+
+                                adjustTheScreenSize(mediaPlayer, surfaceView);
+                                mp.start();
+
+                                // mediaPlayer state:started
+                            }
+                        });
+
+                        mediaPlayer.prepareAsync();
+                    }
+                });
+
+                Log.e("PlayVideoFragment", "surfaceCreated 4");
+                mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+
+                    @Override
+                    public void onPrepared(MediaPlayer mp) {
+                        // mediaPlayer state:prepared
+
+                        adjustTheScreenSize(mediaPlayer, surfaceView);
+                        mp.start();
+
+                        // mediaPlayer state:started
+                    }
+                });
+
+                // mediaPlayer state:initialized
+                mediaPlayer.prepareAsync();
+                Log.e("PlayVideoFragment", "surfaceCreated 5");
 
             }
 
             @Override
             public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-                Log.e("PlayVideoFragment","surfaceChanged");
+                Log.e("PlayVideoFragment", "surfaceChanged");
+
 
             }
 
             @Override
             public void surfaceDestroyed(SurfaceHolder holder) {
-                Log.e("PlayVideoFragment","surfaceDestroyed");
+                Log.e("PlayVideoFragment", "surfaceDestroyed");
             }
         });
     }
@@ -158,32 +206,34 @@ public class PlayVideoFragment extends Fragment {
     @Override
     public void onPause() {
         super.onPause();
-        Log.e("PlayVideoFragment","onPause");
+        mediaPlayer.stop();
+        mediaPlayer.release();
+        Log.e("PlayVideoFragment", "onPause");
     }
 
     @Override
     public void onStop() {
         super.onStop();
-        Log.e("PlayVideoFragment","onStop");
+        Log.e("PlayVideoFragment", "onStop");
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        Log.e("PlayVideoFragment","onDestroyView");
+        Log.e("PlayVideoFragment", "onDestroyView");
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        Log.e("PlayVideoFragment","onDestroy");
+        Log.e("PlayVideoFragment", "onDestroy");
     }
 
     @Override
     public void onDetach() {
         super.onDetach();
         mListener = null;
-        Log.e("PlayVideoFragment","onDetach");
+        Log.e("PlayVideoFragment", "onDetach");
     }
 
     /**
@@ -201,4 +251,36 @@ public class PlayVideoFragment extends Fragment {
         public void onFragmentInteraction(Uri uri);
     }
 
+    private boolean adjustTheScreenSize(MediaPlayer mp, SurfaceView surfaceView) {
+
+        // The video size.
+        int vH = mp.getVideoHeight();
+        int vW = mp.getVideoWidth();
+
+        // The layout size.
+        int lH = view.findViewById(R.id.video_frame_layout).getHeight();
+        int lW = view.findViewById(R.id.video_frame_layout).getWidth();
+
+        // The ratio.
+        double vRatio = ((double) (vH) / vW);
+        double fRatio = ((double) (lH) / lW);
+
+        //check the ratio.
+        if (vRatio > fRatio) {
+
+            ViewGroup.LayoutParams layoutParams = surfaceView.getLayoutParams();
+            layoutParams.height = lH;
+            layoutParams.width = (int) ((1.0 * vW / vH) * lH - 0.5);
+
+            surfaceView.setLayoutParams(layoutParams);
+            surfaceView.setVisibility(View.VISIBLE);
+        } else {
+            ViewGroup.LayoutParams layoutParams = surfaceView.getLayoutParams();
+            layoutParams.width = lW;
+            layoutParams.height = (int) ((1.0 * vH / vW) * lW - 0.5);
+            surfaceView.setLayoutParams(layoutParams);
+            surfaceView.setVisibility(View.VISIBLE);
+        }
+        return true;
+    }
 }

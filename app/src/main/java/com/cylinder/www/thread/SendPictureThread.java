@@ -9,12 +9,9 @@ import com.cylinder.www.env.JsonFace;
 import com.cylinder.www.env.Mode;
 import com.cylinder.www.env.Signal;
 import com.cylinder.www.env.TimeInterval;
-import com.cylinder.www.env.net.InterfaceNetwork;
-import com.cylinder.www.env.net.InterfaceNetworkCreator;
 import com.cylinder.www.env.net.ServerInformationTransaction;
-import com.cylinder.www.env.net.ServerNetworkCreator;
 import com.cylinder.www.env.person.businessobject.Donor;
-import com.cylinder.www.utils.FaceQuality;
+import com.cylinder.www.utils.face.FaceQuality;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -23,8 +20,6 @@ import org.json.JSONObject;
 
 public class SendPictureThread extends Thread {
 
-	private InterfaceNetwork network =null;
-	private InterfaceNetworkCreator NetworkCreator = null;
 	private Handler handler;
     private int result;
 
@@ -32,8 +27,6 @@ public class SendPictureThread extends Thread {
 		
 		super();
 		this.handler = handler;
-        NetworkCreator = new ServerNetworkCreator();
-        network = NetworkCreator.creator();
 		}
 
 	@Override
@@ -77,7 +70,7 @@ public class SendPictureThread extends Thread {
                 }
 
                 ServerInformationTransaction serverInformationTransaction = new ServerInformationTransaction();
-                JSONObject jsonObjectRequest = serverInformationTransaction.sendToServer(network.getJsonURL()+"/rest/photos",jsonObject);
+                JSONObject jsonObjectRequest = serverInformationTransaction.sendToServer("/rest/photos",jsonObject);
 
                 try {
                     result = jsonObjectRequest.getInt("recognitionResult");

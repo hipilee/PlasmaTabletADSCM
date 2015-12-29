@@ -1,426 +1,401 @@
 package com.cylinder.www.ui;
 
+import android.app.FragmentManager;
 import android.app.FragmentTransaction;
+import android.app.KeyguardManager;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
-import android.media.MediaRecorder;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
+import android.os.PowerManager;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
-import android.view.Window;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
-import android.widget.TextView;
 
-import com.cylinder.www.env.Mode;
-import com.cylinder.www.env.Signal;
-import com.cylinder.www.env.TimeInterval;
-import com.cylinder.www.env.font.InterfaceTypeface;
-import com.cylinder.www.env.font.InterfaceTypefaceCreator;
-import com.cylinder.www.env.font.XKTypefaceCreator;
-import com.cylinder.www.env.person.businessobject.Donor;
+import com.cylinder.www.env.net.FilterSignal;
+import com.cylinder.www.env.net.RecordState;
+import com.cylinder.www.env.net.listener.WatcherKeyReceiver;
 import com.cylinder.www.hardware.CameraManager;
-import com.cylinder.www.thread.ObservableMainActivityListenerThread;
-import com.cylinder.www.thread.SendPictureThread;
-import com.cylinder.www.thread.SendVideoThread;
-import com.cylinder.www.utils.ShowGif;
+import com.cylinder.www.thread.ObservableZXDCSignalListenerThread;
+import com.cylinder.www.thread.ObserverZSDCSignalRecordAndFilter;
+import com.cylinder.www.thread.ObserverZXDCSignalUIHandler;
+import com.cylinder.www.utils.time.SyncTime;
 
 import java.io.IOException;
-import java.lang.ref.WeakReference;
-import java.util.Observable;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.lang.ref.SoftReference;
+import java.util.Random;
 
-public class MainActivity extends FragmentActivity implements SurfaceHolder.Callback,ToolBarFragment.OnToolBarOnClickListener{
+public class MainActivity extends FragmentActivity implements SurfaceHolder.Callback, ConfigurationFragment.OnFragmentInteractionListener {
 
-    private Donor donor = Donor.getInstance();
-    private TextView welcomeTextView;
-    private InterfaceTypeface XKface;
-    InterfaceTypefaceCreator typefaceCreator;
-    private View toolbarFragment;
-    private SurfaceView surfaceViewPreview;
-    private TakePictureHandler takePictureHandler;
-    private ObservableMainActivityListenerThread observableMainActivityListenerThread;
-    private ObserverMainHandler observerMainHandler;
+
+    public PlayVideoFragment playVideoFragment;
+    public ImageView iv;
+    public SurfaceView surfaceViewPreview;
+    public View toolbarFragmentContainer;
+    private ObservableZXDCSignalListenerThread observableZXDCSignalListenerThread;
+    private ObserverZXDCSignalUIHandler observerZXDCSignalUIHandler;
+    private ObserverZSDCSignalRecordAndFilter observerZSDCSignalRecordAndFilter;
     private SloganFragment sloganFragment;
-    private VideoFragment videoFragment;
-    public Handler handler;
-    private AppointmentFragment appointmentFragment;
-    private AssessmentFragment assessmentFragment;
-    private ImageView iv;
-    private  PromotionFragment promotionFragment;
+    // Whether the worker close the APP.
+    private Boolean isFinish = false;
+    private Boolean visibility = false;
+    private WatcherKeyReceiver mWatcherKeyReceiver = null;
+    private SyncWork syncWork;
+    private RecordState recordState;
+    private FilterSignal filterSignal;
+    private Intent uploadIntent;
+    private FrameLayout configurationFragmentContainer;
+
+    PowerManager.WakeLock mWakelock;
+    KeyguardManager km;
+    PowerManager pm;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
 
-        // Hide the actionBar & delete the status bar, set the screen landscape.
+        super.onCreate(savedInstanceState);
+        Intent forceClosingIntent = getIntent();
+
+        Log.e("camera", "onCreate begin  " + "  " + Thread.currentThread().getId() + this.toString() + forceClosingIntent.getStringExtra("reason"));
+        if (savedInstanceState != null) {
+            Log.e("camera", savedInstanceState.getString("msg"));
+        }
+
+        // Don't show the status bar, set the screen landscape, and keep the screen light all the time.
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-        this.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        this.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+        pm = (PowerManager) getSystemService(POWER_SERVICE);
+        mWakelock = pm.newWakeLock(PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.SCREEN_DIM_WAKE_LOCK, "SimpleTimer");
+
+        km = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+
+        KeyguardManager.KeyguardLock kl = km.newKeyguardLock("unLock");
+        kl.disableKeyguard();  //解锁
+        mWakelock.acquire();//点亮
+
+        // Initialization
         setContentView(R.layout.activity_main);
 
-        // Given the typeface, we should construct a factory pattern for these type face.
-        typefaceCreator = new XKTypefaceCreator();
-        XKface = typefaceCreator.createTypeface(this);
+        // Initialize the UI component.
+        initializeUI();
 
-        sloganFragment = new SloganFragment();
-        getFragmentManager().beginTransaction().add(R.id.main_ui_fragment,sloganFragment).commit();
+        // Initialize the object which used in the interaction of signal.
+        initializeCommunication();
+        Log.e("camera", "onCreate end  ");
+    }
 
-        welcomeTextView = (TextView)this.findViewById(R.id.tv_welcome);
-        welcomeTextView.setTypeface(XKface.getTypeface());
-        Log.e("error", donor.getDonorID() + "");
-        welcomeTextView.setText(donor.getUserName() + ":  欢迎您来献浆！");
+    private void initializeUI() {
 
-        iv = (ImageView) this.findViewById(R.id.ivHint);
+        // Initialize the first fragment which is the slogan which says "献血献浆同样光荣！"
+        sloganFragment = SloganFragment.newInstance(getString(R.string.slogan), "");
+        // Construct the fragment manager to manager the fragment.
+        FragmentManager fragmentManager = getFragmentManager();
+        FragmentTransaction transaction = fragmentManager.beginTransaction();
+        // Add whatever is in the fragment_container view with this fragment,
+        // and add the transaction to the back stack
+        transaction.add(R.id.main_ui_fragment_container, sloganFragment);
+        // Commit the transaction which won't occur immediately.
+        transaction.commit();
 
+        // The container to hold the configuration view.
+        configurationFragmentContainer = (FrameLayout) this.findViewById(R.id.configuration_fragment_container);
 
-        toolbarFragment = this.findViewById(R.id.tool_bar_fragment);
-        toolbarFragment.setVisibility(View.GONE);
+        // The toolbarFragmentContainer to show some long-time visible info such as time and calling for help button.
+        toolbarFragmentContainer = this.findViewById(R.id.tool_bar_fragment);
+        toolbarFragmentContainer.setVisibility(View.GONE);
+        // The image view to show hint animation such as the fist hint.
+        iv = (ImageView) toolbarFragmentContainer.findViewById(R.id.ivAnimaiton);
 
-
-
-        surfaceViewPreview = (SurfaceView) this.findViewById(R.id.surfaceview_preview);
+        // The surface view is to show the video stream.The camera surfaceView and holder is conform to the MVC pattern.
+        surfaceViewPreview = (SurfaceView) this.findViewById(R.id.surface_view_preview);
+        // Make sure the surfaceView holder and camera ready and then do other things.
+        // The prepare work finishes after surfaceCreate() function.
+        // This method addCallback() is asynchronous, So! you should do something in surfaceCreated() method
+        // which need that camera is ready.
         surfaceViewPreview.getHolder().addCallback(this);
 
-
-
-        takePictureHandler = new TakePictureHandler(this);
-
-        observerMainHandler = new ObserverMainHandler(new WeakReference<MainActivity>(MainActivity.this));
-        observableMainActivityListenerThread = new ObservableMainActivityListenerThread(Donor.getInstance());
-        observableMainActivityListenerThread.addObserver(observerMainHandler);
-        observableMainActivityListenerThread.start();
-
-        Log.e("error", "MainActivity==onCreate");
-
-
-        handler = new Handler(){
-            @Override
-            public void handleMessage(Message msg) {
-                super.handleMessage(msg);
-                switch (msg.what) {
-                    case 0:
-                        toolbarFragment.setVisibility(View.VISIBLE);
-                        assessmentFragment = new AssessmentFragment();
-                        //Create new fragment and transaction
-                        FragmentTransaction transaction = getFragmentManager().beginTransaction();
-                        //Replace whatever is in the fragment_container view with this fragment,
-                        //and add the transaction to the back stack
-                        transaction.replace(R.id.main_ui_fragment, assessmentFragment);
-                        transaction.addToBackStack(null);
-                        //Commit the transaction
-                        transaction.commit();
-
-//                        getFragmentManager().beginTransaction().add(R.id.main_ui_fragment, assessmentFragment).commit();
-                        break;
-                    case 1:
-                        toolbarFragment.setVisibility(View.GONE);
-                        PlayVideoFragment playVideoFragment =new PlayVideoFragment();
-                        getFragmentManager().beginTransaction().add(R.id.main_ui_fragment, playVideoFragment).commit();
-                        break;
-                    case 3:
-                        toolbarFragment.setVisibility(View.VISIBLE);
-                        VideoFragment v =new VideoFragment();
-                        getFragmentManager().beginTransaction().add(R.id.main_ui_fragment, v).commit();
-                        break;
-
-                }
-
-            }
-        };
     }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-        Log.e("error", "MainActivity==onStart");
-    }
+    private void initializeCommunication() {
 
-    @Override
-    protected void onRestart() {
-        super.onRestart();
-        Log.e("error", "MainActivity==onRestart");
-    }
+        // Synchronize the time with the server.
+        // TODO
+        SyncTime.syncTime(null);
 
-    @Override
-    protected void onResume() {
-        super.onResume();
+        // Used to record the signals received.
+        recordState = new RecordState(this);
+        recordState.retrieve();
 
+        // Used to filter the unnecessary
+        filterSignal = new FilterSignal();
 
-        Log.e("error", "MainActivity==onResume");
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        Log.e("error", "MainActivity==onPause");
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        Log.e("error", "MainActivity==onStop");
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        CameraManager.getInstance().stopPreview();
-        CameraManager.getInstance().release();
-        Log.e("error", "MainActivity==onDestroy");
-    }
-
-    @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if(keyCode == KeyEvent.KEYCODE_BACK){
-            return  true;
-        }
-        return  super.onKeyDown(keyCode, event);
+        // Deal the difference whether the onPause() or observableZXDCSignalListenerThread is firstly executed.
+        syncWork = new SyncWork();
     }
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
 
-        if(Mode.isDebug){
-            Log.e("error","MainActivity==surfaceCreated");
-        }
         try {
-            CameraManager.getInstance().getCamera().setPreviewDisplay(holder);
-            CameraManager.getInstance().setCameraDisplayOrientation(this);
+            Log.e("camera", "surfaceCreated " + this.toString());
+
+            // Initialize the front camera.
+            CameraManager.getFrontInstance(this).getCamera().setPreviewDisplay(holder);
+
+            // Start the listener thread to listen the signal from the server,
+            // the reason why we start the thread here is to make sure the camera holder surface
+            // surfaceView all ready.
+            // The observerZXDCSignalUIHandler, observerZSDCSignalRecordAndFilter and observableZXDCSignalListenerThread use the observer pattern.
+            observerZSDCSignalRecordAndFilter = new ObserverZSDCSignalRecordAndFilter(recordState, filterSignal);
+            observerZXDCSignalUIHandler = new ObserverZXDCSignalUIHandler(new SoftReference<MainActivity>(this));
+            observableZXDCSignalListenerThread = new ObservableZXDCSignalListenerThread(recordState, filterSignal);
+
+            // Add the observers into the observable object.
+            observableZXDCSignalListenerThread.addObserver(observerZXDCSignalUIHandler);
+            observableZXDCSignalListenerThread.addObserver(observerZSDCSignalRecordAndFilter);
+            //********************************
+            syncWork.workAfterSurfaceCreated(observableZXDCSignalListenerThread, observerZXDCSignalUIHandler);
+
         } catch (IOException e) {
-            if(Mode.isDebug){
-                Log.e("error","MainActivity==surfaceCreated",e);
-            }
+
         } finally {
         }
     }
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-        CameraManager.getInstance().getCamera().startPreview();
+        Log.e("camera", "surfaceChanged " + this.toString());
 
-        Log.e("error","MainActivity==surfaceChanged");
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
-        Log.e("error","MainActivity==surfaceDestroyed");
-    }
+        Log.e("camera", "surfaceDestroyed " + this.toString());
 
+    }
 
     @Override
-    public void onButtonSelected(Signal s) {
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.main, menu);
+        return true;
+    }
 
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
 
-        switch(s){
-            case TOVIDEO:
-                videoFragment = new VideoFragment();
-                getFragmentManager().beginTransaction().add(R.id.main_ui_fragment,videoFragment).commit();
-                break;
-            case TOAPPOINTMENT:
-                appointmentFragment = new AppointmentFragment();
-                getFragmentManager().beginTransaction().add(R.id.main_ui_fragment,appointmentFragment).commit();
-                break;
-            case TOEVALUATION:
-                assessmentFragment = new AssessmentFragment();
-                getFragmentManager().beginTransaction().add(R.id.main_ui_fragment,assessmentFragment).commit();
+        switch (item.getItemId()) {
+
+            case R.id.network_settings:
+                dealNetworkSettings();
                 break;
 
+            case R.id.app_finish:
+                dealAPPFinish();
+                break;
+
+            default:
+                break;
         }
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void dealNetworkSettings() {
+        configurationFragmentContainer.setVisibility(View.VISIBLE);
+    }
+
+    private void dealAPPFinish() {
+        this.isFinish = true;
+        this.finish();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Log.e("camera", "onStart " + this.toString());
+        registerWatcherKeyReceiver(this);
+    }
+
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+        Log.e("camera", "onRestart " + this.toString());
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        setVisibility(true);
+
+        Log.e("camera", "onResume" + this.toString());
+
+//        uploadIntent = new Intent(this, UpLoadBackupVideoIntentService.class);
+//        uploadIntent.setAction("upload");
+//        startService(uploadIntent);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.e("camera", "onPause begin" + this.toString());
+
+        setVisibility(false);
+
+        syncWork.workAfterOnPause(observableZXDCSignalListenerThread, observerZXDCSignalUIHandler);
+
+        Log.e("camera", "onPause end" + this.toString());
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Log.e("camera", "onStop " + this.toString());
+        CameraManager.release();
 
     }
 
-    private  static class TakePictureHandler extends Handler {
-
-        private WeakReference<MainActivity> mActivity;
-
-        public TakePictureHandler(MainActivity Activity) {
-            super();
-            this.mActivity = new WeakReference<MainActivity>(Activity);
-        }
-
-        @Override
-        public void handleMessage(Message msg) {
-
-            switch((Signal)msg.obj){
-
-                case CAPTURE:
-//                    Toast.makeText(mActivity.get(), "开始拍照", Toast.LENGTH_SHORT).show();
-
-                    CameraManager.getInstance().takePicture(new SendPictureThread(this));
-                    break;
-
-                case ENDCAPTURE:
-//                    Toast.makeText(mActivity.get(), "结束拍照", Toast.LENGTH_SHORT).show();
-                    recordVideo(mActivity.get().surfaceViewPreview,1);
-
-                    break;
-
-                case LAUNCHVIDEO:
-//                    Toast.makeText(mActivity.get(), "启动视频", Toast.LENGTH_SHORT).show();
-                    recordVideo(mActivity.get().surfaceViewPreview,0);
-
-                    break;
-                default:
-
-            }
-        }
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.e("camera", "onDestroy " + this.toString());
+        CameraManager.release();
 
     }
 
-    private static class ObserverMainHandler extends Handler implements java.util.Observer {
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
 
-        private WeakReference<MainActivity> mActivity;
-        private ShowGif showGif=null;
-
-        private ObserverMainHandler(WeakReference<MainActivity> mActivity) {
-            this.mActivity = mActivity;
-
+        switch (keyCode) {
+            // The donor can't use the BACK button to close the APP.
+            case KeyEvent.KEYCODE_BACK:
+                return true;
         }
+        return super.onKeyDown(keyCode, event);
+    }
 
-        @Override
-        public void handleMessage(Message msg) {
+    private void registerWatcherKeyReceiver(Context context) {
+        Log.i("camera", "registerHomeKeyReceiver");
+        this.mWatcherKeyReceiver = new WatcherKeyReceiver();
+        final IntentFilter homeFilter = new IntentFilter(Intent.ACTION_CLOSE_SYSTEM_DIALOGS);
 
-            super.handleMessage(msg);
-            switch((Signal)msg.obj){
-                case PUNCTURE:
-                    mActivity.get().welcomeTextView.setVisibility(View.GONE);
-                    mActivity.get().promotionFragment = new PromotionFragment();
-                    mActivity.get().getFragmentManager().beginTransaction().add(R.id.main_ui_fragment,mActivity.get().promotionFragment).commit();
+        context.registerReceiver(this.mWatcherKeyReceiver, homeFilter);
+    }
 
-//                    PlayVideoFragment p = new PlayVideoFragment();
-//                    mActivity.get().getFragmentManager().beginTransaction().add(R.id.main_ui_fragment,p).commit();
+    private void unregisterWatcherKeyReceiver(Context context) {
+        Log.i("camera", "unregisterHomeKeyReceiver");
+        if (null != this.mWatcherKeyReceiver) {
+            context.unregisterReceiver(this.mWatcherKeyReceiver);
+        }
+    }
 
-//                    VideoFragment v = new VideoFragment();
-//                    mActivity.get().getFragmentManager().beginTransaction().add(R.id.main_ui_fragment,v).commit();
+    public Boolean getVisibility() {
+        return visibility;
+    }
+
+    public void setVisibility(Boolean visibility) {
+        this.visibility = visibility;
+    }
 
 
-                    //播放视频
-                    Log.e("error","播放视频");
-                    break;
-                case START:
-                    msg = Message.obtain();
-                    msg.obj = Signal.CAPTURE;
-                    mActivity.get().takePictureHandler.sendMessageDelayed(msg,2000);
-                    TimeInterval.getInstance().setStartTime(System.currentTimeMillis());
-                    Log.e("error","开始");
-                    break;
-                case FIST:
-                    if(showGif == null)
-                    {
+    private class SyncWork {
+        private Boolean isFirst = true;
 
-                        showGif = new ShowGif(mActivity.get().iv,"makeafist.gif",10,mActivity.get());
-                        showGif.start();
-                    }
-                    else if(!showGif.isShowing()){
-                        showGif = new ShowGif(mActivity.get().iv,"makeafist.gif",10,mActivity.get());
-                        showGif.start();
-                    }
-
-                    Log.e("error","握拳");
-                    break;
-                case END:
-                    Log.e("error","结束");
-                    mActivity.get().sloganFragment = new SloganFragment();
-                    mActivity.get().getFragmentManager().beginTransaction().add(R.id.main_ui_fragment,mActivity.get().sloganFragment).commit();
-
-                    mActivity.get().welcomeTextView = (TextView) mActivity.get().findViewById(R.id.tv_welcome);
-                    mActivity.get().welcomeTextView.setTypeface(mActivity.get().XKface.getTypeface());
-                    mActivity.get().welcomeTextView.setVisibility(View.VISIBLE);
-                    mActivity.get().welcomeTextView.setText(mActivity.get().donor.getUserName() + ":  谢谢您的献浆！");
-                    mActivity.get().toolbarFragment.setVisibility(View.GONE);
-                    break;
-                default:
+        public synchronized void workAfterSurfaceCreated(ObservableZXDCSignalListenerThread observableZXDCSignalListenerThread, ObserverZXDCSignalUIHandler observerZXDCSignalUIHandler) {
+            if (isFirst) {
+                Log.e("camera", "workAfterSurfaceCreated true" + MainActivity.this.toString());
+                isFirst = false;
+                observableZXDCSignalListenerThread.start();
+            } else {
+                Log.e("camera", "workAfterSurfaceCreated false" + MainActivity.this.toString());
+                CameraManager.release();
             }
         }
 
-        @Override
-        public void update(Observable observable, Object data) {
-            Message msg = Message.obtain();
-            switch ((Signal)data){
-                case PUNCTURE:
+        public synchronized void workAfterOnPause(ObservableZXDCSignalListenerThread observableZXDCSignalListenerThread, ObserverZXDCSignalUIHandler observerZXDCSignalUIHandler) {
+            if (isFirst) {// this logical come out because the sleep button is pressed.
+                isFirst = false;
+                Log.e("camera", "workAfterOnPause true" + MainActivity.this.toString());
 
-                    msg.obj = Signal.PUNCTURE;
-                    sendMessage(msg);
-                    break;
-                case START:
-                    msg.obj = Signal.START;
-                    sendMessage(msg);
-                    break;
-                case FIST:
-                    msg.obj = Signal.FIST;
-                    sendMessage(msg);
-                    break;
-                case END:
-                    msg.obj = Signal.END;
-                    sendMessage(msg);
-                    break;
-                default:
+                unregisterWatcherKeyReceiver(MainActivity.this);
+                if (CameraManager.isRecord()) {
+                    CameraManager.stopRecord(MainActivity.this, false);
+                }
+                CameraManager.release();
+                MainActivity.this.finish();
+//                ***************************
+                Intent intentToNewMainActivity = new Intent(MainActivity.this, MainActivity.class);
+
+                int a = new Random().nextInt(100);
+                Log.e("camera", "workAfterOnPause false isFinish" + a + MainActivity.this.toString());
+                intentToNewMainActivity.putExtra("reason", "foreclosing  =  " + a + "  =  ");
+                startActivity(intentToNewMainActivity);
+//                *****************************************
+
+            } else {
+                Log.e("camera", "workAfterOnPause false" + MainActivity.this.toString());
+
+                if (!isFinish) {
+                    Intent intentToNewMainActivity = new Intent(MainActivity.this, MainActivity.class);
+
+                    int a = new Random().nextInt(100);
+                    Log.e("camera", "workAfterOnPause false isFinish" + a + MainActivity.this.toString());
+                    MainActivity.this.finish();
+                    intentToNewMainActivity.putExtra("reason", "foreclosing  =  " + a + "  =  ");
+                    startActivity(intentToNewMainActivity);
+                }
+                Log.e("camera", "workAfterOnPause false " + MainActivity.this.toString());
+                // Stop the listener thread.
+                observableZXDCSignalListenerThread.setIsContinue(false);
+                Log.e("camera", "workAfterOnPause false 1" + MainActivity.this.toString());
+
+                // Stop dealing the signal from ZXDC.
+                observerZXDCSignalUIHandler.setIsDeal(false);
+                Log.e("camera", "workAfterOnPause false 2" + MainActivity.this.toString());
+
+                // Wait the Listener thread to stop receiving the signal.
+                observableZXDCSignalListenerThread.commitSignal(isFinish);
+                Log.e("camera", "workAfterOnPause false 3" + MainActivity.this.toString());
+
+                if (CameraManager.isRecord()) {
+                    CameraManager.stopRecord(MainActivity.this, false);
+                }
+                Log.e("camera", "workAfterOnPause false 4" + MainActivity.this.toString());
+
+                CameraManager.release();
+                Log.e("camera", "workAfterOnPause false 5" + MainActivity.this.toString());
+
+                unregisterWatcherKeyReceiver((MainActivity.this));
+                Log.e("camera", "workAfterOnPause false 6" + MainActivity.this.toString());
+
             }
         }
     }
 
+    @Override
+    public void onFragmentInteraction(int id) {
 
-
-    private static void recordVideo(SurfaceView s, final int r){
-        final MediaRecorder mediaRecorder =new MediaRecorder();
-        final Handler handler = new Handler() {
-            @Override
-            public void handleMessage(Message msg) {
-
-                super.handleMessage(msg);
-                mediaRecorder.stop();
-                mediaRecorder.release();
-
-                CameraManager.getInstance().getCamera().lock();
-                CameraManager.getInstance().stopPreview();
-                CameraManager.getInstance().release();
-
-                new SendVideoThread(r).start();
-            }
-        };
-        Timer timer = new Timer();
-        TimerTask task = new TimerTask() {
-            @Override
-            public void run() {
-                // TODO Auto-generated method stub
-                Message message = new Message();
-                message.what = 1;
-                handler.sendMessage(message);
-            }
-        };
-
-        CameraManager.getInstance().getCamera().startPreview();
-
-        CameraManager.getInstance().getCamera().unlock();
-
-        mediaRecorder.setCamera(CameraManager.getInstance().getCamera());
-
-//        mediaRecorder.setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
-
-        mediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
-
-//        mediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH));
-        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4                                                                    );
-//        mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-        mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
-        mediaRecorder.setVideoSize(640, 480);
-
-        mediaRecorder.setOutputFile("/sdcard/video.mp4");
-
-        mediaRecorder.setPreviewDisplay(s.getHolder().getSurface());
-        try {
-            mediaRecorder.prepare();
-        } catch (IOException e) {
-            e.printStackTrace();
+        switch (id) {
+            case R.id.savebutton:
+                Log.e("onFragmentInteraction", "save");
+                break;
+            case R.id.quitbutton:
+                Log.e("onFragmentInteraction", "quit");
+                configurationFragmentContainer.setVisibility(View.INVISIBLE);
+                break;
         }
-        mediaRecorder.start();
-        timer.schedule(task,1000*10);
     }
+
+
 }

@@ -26,10 +26,12 @@ public class ShowGif {
     private Context context;
     private int count;
     private static boolean isS;
-    public static synchronized boolean isShowing(){
+
+    public static synchronized boolean isShowing() {
         return isS;
     }
-    public static synchronized void setIsS(boolean b){
+
+    public static synchronized void setIsS(boolean b) {
         isS = b;
     }
 
@@ -38,12 +40,12 @@ public class ShowGif {
         @Override
         public void handleMessage(Message msg) {
             count--;
-            if(count==0){
+            if (count == 0) {
                 timer.cancel();
                 iv.setVisibility(View.INVISIBLE);
                 setIsS(false);
             }
-            iv.setImageBitmap((Bitmap)msg.obj);
+            iv.setImageBitmap((Bitmap) msg.obj);
             super.handleMessage(msg);
         }
     };
@@ -55,7 +57,7 @@ public class ShowGif {
         public void run() {
             Bitmap bitmap = gifFrames.getImage();
             gifFrames.nextFrame();
-            if(bitmap != null){
+            if (bitmap != null) {
                 Message msg = Message.obtain();
                 msg.obj = bitmap;
                 handler.sendMessage(msg);
@@ -66,7 +68,7 @@ public class ShowGif {
     public ShowGif(ImageView iv, String gifPath, int seconds, Context context) {
 
         this.iv = iv;
-String s;
+        String s;
         this.seconds = seconds;
         this.context = context;
         try {
@@ -74,26 +76,26 @@ String s;
         } catch (IOException e) {
             e.printStackTrace();
             s = e.toString();
-            Log.e("error",e.toString());
+            Log.e("error", e.toString());
         }
         gifFrames = GifFrames.createGifFrames(is);
-        count = seconds*10;
+        count = seconds * 10;
         setIsS(true);
 
     }
 
-    public void resetTime(){
+    public void resetTime() {
 
-        count = seconds*10;
+        count = seconds * 10;
     }
 
-    public void start(){
+    public void start() {
 
         iv.setVisibility(View.VISIBLE);
-        timer.schedule(task,0,100);
+        timer.schedule(task, 0, 100);
     }
 
-    public void stop(){
+    public void stop() {
         timer.cancel();
         iv.setVisibility(View.INVISIBLE);
     }

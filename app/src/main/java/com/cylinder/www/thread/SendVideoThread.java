@@ -1,68 +1,101 @@
 package com.cylinder.www.thread;
 
-import com.cylinder.www.env.net.InterfaceNetwork;
-import com.cylinder.www.env.net.InterfaceNetworkCreator;
-import com.cylinder.www.env.net.ServerInformationTransaction;
-import com.cylinder.www.env.net.ServerNetworkCreator;
-import com.cylinder.www.env.person.businessobject.Donor;
+import android.util.Log;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.cylinder.www.env.net.softfanftp.FtpSenderFile;
+import com.cylinder.www.env.net.softfanftp.SoftFanFTPException;
+import com.cylinder.www.hardware.CameraManager;
+import com.cylinder.www.ui.MainActivity;
+import com.cylinder.www.utils.file.SelfFile;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Date;
 
 /**
  * Created by Alvin on 2015/3/3.
  */
 public class SendVideoThread extends Thread {
 
-    private InterfaceNetwork network =null;
-    private InterfaceNetworkCreator NetworkCreator = null;
+    String lPath, rPath;
+    MainActivity mainActivity;
+    Boolean isEndSignal;
+    String resultStr;
 
-    int r;
-    public SendVideoThread(int r) {
-        this.r = r;
-        NetworkCreator = new ServerNetworkCreator();
-        network = NetworkCreator.creator();
+    public SendVideoThread(String localPath, String remotePath, MainActivity mainActivity, Boolean isEndSignal) {
+        this.lPath = localPath;
+        this.rPath = remotePath;
+        this.mainActivity = mainActivity;
+        this.isEndSignal = isEndSignal;
     }
 
     @Override
     public void run() {
         super.run();
+        long start = System.currentTimeMillis();
 
-    }
+        File file = new File(this.lPath);
+        boolean b = file.exists();
+        if (b) {
+            Log.e("camera", "file exists!");
+        } else {
+            Log.e("camera", "file does not exists!");
+        }
 
-    /**
-     * 文件转化为字节数组
-     *
-     * @param
-     * @return
-     */
-    public static byte[] getBytesFromFile(String filePath){
-        byte[] buffer = null;
+        Log.e("camera", "SendVideoThread==run start 1");
+
+        FtpSenderFile sender = new FtpSenderFile("192.168.0.94", 13021);
+
         try {
-            File file = new File(filePath);
-            FileInputStream fis = new FileInputStream(file);
-            ByteArrayOutputStream bos = new ByteArrayOutputStream(1024*1024);
-            byte[] b = new byte[1024*1024];
-            int n;
-            while ((n = fis.read(b)) != -1) {
-                bos.write(b, 0, n);
-            }
-            fis.close();
-            bos.close();
-            buffer = bos.toByteArray();
-        } catch (FileNotFoundException e) {
+            Log.e("camera", "SendVideoThread==run start 2");
+            Log.e("camera EXHAUST TIME ", lPath);
+            Log.e("camera EXHAUST TIME ", rPath);
+            resultStr = sender.send(lPath, rPath);
+
+            Log.e("camera", "SendVideoThread==run start 2");
+
+        } catch (SoftFanFTPException e) {
+            Log.e("camera", "SendVideoThread==run start 3");
+
             e.printStackTrace();
         } catch (IOException e) {
+            Log.e("camera", "SendVideoThread==run start 4");
+
             e.printStackTrace();
+        } catch (Exception e) {
+            Log.e("camera", "SendVideoThread==run start 5");
         }
-        return buffer;
+
+
+        long end = System.currentTimeMillis();
+        Log.e("camera EXHAUST TIME ", (end - start)  + "");
+
+
+        Log.e("camera EXHAUST TIME ", resultStr);
+
+        if (resultStr.equals("传送成功")) {
+            // success and delete the video file.
+            SelfFile.delFile(lPath);
+        } else {
+            // save the video if failure.
+            File srcFile = SelfFile.createNewFile(SelfFile.generateLocalVideoName());
+            File destFile = SelfFile.createNewFile(SelfFile.generateLocalBackupVideoName());
+            try {
+                SelfFile.copyFile(srcFile, destFile);
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+            }
+        }
+
+        if (isEndSignal) {
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+            }
+            this.mainActivity.finish();
+        }
+
     }
 }
