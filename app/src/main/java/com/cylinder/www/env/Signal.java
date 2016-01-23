@@ -3,6 +3,7 @@ package com.cylinder.www.env;
 /**
  * Created by xiutao on 2014/9/19.
  */
+//
 public enum Signal {
     LAUCHTABLET,
     CAPTURE,
