@@ -4,7 +4,6 @@ import android.util.Log;
 
 import com.cylinder.www.env.net.softfanftp.FtpSenderFile;
 import com.cylinder.www.env.net.softfanftp.SoftFanFTPException;
-import com.cylinder.www.hardware.CameraManager;
 import com.cylinder.www.ui.MainActivity;
 import com.cylinder.www.utils.file.SelfFile;
 

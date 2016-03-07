@@ -1,5 +1,6 @@
 package com.cylinder.www.ui;
 
+import android.app.ActionBar;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.app.KeyguardManager;
@@ -238,7 +239,7 @@ public class MainActivity extends FragmentActivity implements SurfaceHolder.Call
         super.onResume();
 
         setVisibility(true);
-
+        ActionBar actionBar = getActionBar();
         Log.e("camera", "onResume" + this.toString());
 
 //        uploadIntent = new Intent(this, UpLoadBackupVideoIntentService.class);
